@@ -1,5 +1,6 @@
 package queue
 
+import "core:fmt"
 import SDL "vendor:sdl3"
 import TTF "vendor:sdl3/ttf"
 
@@ -10,7 +11,6 @@ CommandType :: enum u8 {
 	FILLED_RECT,
 	TEXT,
 	DEBUG_TEXT,
-	DEBUG_TEXT_FORMAT,
 }
 
 Command :: struct {
@@ -23,13 +23,7 @@ Command :: struct {
 	text:     union {
 		cstring,
 		^TTF.Text,
-		FormattedString,
 	},
-}
-
-FormattedString :: struct {
-	fmt:  cstring,
-	args: []any,
 }
 
 drawFilledRect :: proc(rect: ^SDL.FRect, color := SDL.Color{255, 255, 255, 255}) {
@@ -48,24 +42,13 @@ drawDebugText :: proc(x, y: f32, text: cstring, color := SDL.Color{255, 255, 255
 	append(&renderQ, Command{.DEBUG_TEXT, color, [2]f32{x, y}, text})
 }
 
-drawDebugTextFormat :: proc(
-	x, y: f32,
-	fmt: cstring,
-	args: ..any,
-	color := SDL.Color{255, 255, 255, 255},
-) {
-	append(&renderQ, Command{.DEBUG_TEXT_FORMAT, color, [2]f32{x, y}, FormattedString{fmt, args}})
+drawDebugTextFormat :: proc(x, y: f32, format: string, args: ..any, color := SDL.Color{255, 255, 255, 255}) {
+	drawDebugText(x,y, fmt.ctprintf(format, args), color)
 }
-
-@(private)
-oldColor: SDL.Color
 
 render :: proc(renderer: ^SDL.Renderer) {
 	for cmd in renderQ {
-		if cmd.color != oldColor {
-			SDL.SetRenderDrawColor(renderer, cmd.color.r, cmd.color.g, cmd.color.b, cmd.color.a)
-			oldColor = cmd.color
-		}
+		SDL.SetRenderDrawColor(renderer, cmd.color.r, cmd.color.g, cmd.color.b, cmd.color.a)
 		switch cmd.type {
 		case .RECT:
 			SDL.RenderRect(renderer, cmd.rectOrXY.(^SDL.FRect))
@@ -84,15 +67,7 @@ render :: proc(renderer: ^SDL.Renderer) {
 				cmd.rectOrXY.([2]f32).y,
 				cmd.text.(cstring),
 			)
-		case .DEBUG_TEXT_FORMAT:
-			SDL.RenderDebugTextFormat(
-				renderer,
-				cmd.rectOrXY.([2]f32).x,
-				cmd.rectOrXY.([2]f32).y,
-				cmd.text.(FormattedString).fmt,
-				cmd.text.(FormattedString).args
-			)
 		}
 	}
+	clear(&renderQ)
 }
-

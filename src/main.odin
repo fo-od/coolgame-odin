@@ -1,6 +1,5 @@
 package main
 
-import "core:fmt"
 import "core:os"
 import "core:strings"
 import "engine/render/queue"
@@ -8,18 +7,13 @@ import "engine/util/timer"
 import SDL "vendor:sdl3"
 import TTF "vendor:sdl3/ttf"
 
-Mouse :: struct {
-	x, y:   f32,
-	button: SDL.MouseButtonFlags,
-}
-
 window: ^SDL.Window
 renderer: ^SDL.Renderer
 font: ^TTF.Font
 textEngine: ^TTF.TextEngine
 
 deltaTime: f32
-targetFPS: u8
+targetFPS:: 60
 
 camX, camY: f32
 
@@ -27,6 +21,11 @@ gameRunning := false
 
 keyboardState: [^]bool
 mouse: Mouse
+
+Mouse :: struct {
+	x, y:   f32,
+	button: SDL.MouseButtonFlags,
+}
 
 windowWidth, windowHeight: i32 = 640, 480
 
@@ -41,15 +40,14 @@ init :: proc() -> bool {
 	renderer = SDL.CreateRenderer(window, nil)
 
 	// enable vsync
-	// SDL.SetRenderVSync(renderer, 1)
-	targetFPS = 60
+	SDL.SetRenderVSync(renderer, 0)
 
 	// ttf stuff
 	TTF.Init()
 	textEngine = TTF.CreateRendererTextEngine(renderer)
 	fontPath, err := os.join_path(
 		{string(SDL.GetBasePath()), "assets/cozette.fnt"},
-		context.allocator,
+		context.temp_allocator,
 	)
 	font = TTF.OpenFont(strings.clone_to_cstring(fontPath), 13)
 
@@ -109,15 +107,13 @@ main :: proc() {
 
 		if renderingNS != 0 {
 			fps := 1000000000.0 / f64(renderingNS)
-			sb := strings.Builder{}
-
-			queue.drawDebugText(0, 0, strings.clone_to_cstring(fmt.sbprintf(&sb, "fps: %f", fps)))
+			queue.drawDebugTextFormat(0, 0, "fps: %f", fps)
 		}
 
 		render()
 
 		renderingNS = timer.getTicksNS(&fpsTimer)
-		nsPerFrame: u64 : 1000000000 / 60
+		nsPerFrame: u64 : 1000000000 / targetFPS
 		deltaTime = f32(SDL.GetTicks() - currentTick) / 1000.0
 		if renderingNS < nsPerFrame {
 			SDL.DelayNS(nsPerFrame - renderingNS)
