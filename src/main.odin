@@ -105,11 +105,6 @@ main :: proc() {
 			input(&event)
 		}
 
-		if renderingNS != 0 {
-			fps := 1000000000.0 / f64(renderingNS)
-			queue.drawDebugTextFormat(0, 0, "fps: %f", fps)
-		}
-
 		render()
 
 		renderingNS = timer.getTicksNS(&fpsTimer)
