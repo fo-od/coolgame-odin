@@ -4,6 +4,12 @@ import "core:os"
 import SDL "vendor:sdl3"
 import TTF "vendor:sdl3/ttf"
 import "core:strings"
+import "engine/util/timer"
+
+Mouse :: struct {
+	x, y  : f32,
+	button : SDL.MouseButtonFlags,
+}
 
 window       : ^SDL.Window
 renderer     : ^SDL.Renderer
@@ -16,10 +22,11 @@ camX, camY   : f32
 gameRunning  : = false
 
 keyboardState  : [^]bool
-mouseState     : SDL.MouseButtonFlags
-mouseX, mouseY : f32
+mouse          : Mouse
 
 windowWidth, windowHeight : i32 = 640, 480
+
+// TODO: when loading a level, generate a quadtree for that level
 
 init :: proc() -> bool {
     // sdl stuff
@@ -52,32 +59,42 @@ exit :: proc() {
 }
 
 render :: proc() {
-	SDL.RenderDebugTextFormat(renderer, 0, 0, "hi")
-}
-
-mouse :: struct {
-	x, y : f32
+	renderingTime = SDL.GetTicksNS()
+	SDL.SetRenderDrawColor(renderer, 0, 0, 0, SDL.ALPHA_OPAQUE)
+	SDL.RenderClear(renderer)
 	
+	SDL.SetRenderDrawColor(renderer, 255, 255, 255, SDL.ALPHA_OPAQUE)
+	SDL.RenderDebugTextFormat(renderer, 0, 0, "mouse x: %f, mouse y: %f\nbuttons: %d", mouse.x, mouse.y, mouse.button)
+	
+	SDL.RenderPresent(renderer)
+	renderingTime = SDL.GetTicksNS() - renderingTime
 }
 
 input :: proc(event: ^SDL.Event) {
-	keyboardState = SDL.GetKeyboardState(nil)
-	mouseState = SDL.GetMouseState(&mouseX, &mouseY)
-	
-	if event.type == SDL.EventType.QUIT {
-        gameRunning = false;
-    }
-
-    if event.type == SDL.EventType.WINDOW_RESIZED {
-        SDL.GetWindowSizeInPixels(window, &windowWidth, &windowHeight);
-    }
-    
+	#partial switch event.type {
+	case .QUIT:
+		gameRunning = false
+		
+	case .WINDOW_RESIZED:
+		SDL.GetWindowSizeInPixels(window, &windowWidth, &windowHeight)
+		
+	case .KEY_DOWN, .KEY_UP:
+		keyboardState = SDL.GetKeyboardState(nil)
+		
+	case .MOUSE_MOTION, .MOUSE_BUTTON_DOWN, .MOUSE_BUTTON_UP:
+		mouse.button = SDL.GetMouseState(&mouse.x, &mouse.y)
+	}
 }
+
+fpsTimer : timer.Timer
+renderingTime : u64
 
 main :: proc() {
 	if !init() do return
+	defer exit()
 
 	for ;gameRunning; {
+		timer.start(&fpsTimer)
         currentTick := SDL.GetTicks()
 
         event : SDL.Event
@@ -89,6 +106,4 @@ main :: proc() {
 
         deltaTime = f32(SDL.GetTicks() - currentTick) / 1000.0
     }
-
-	exit()
 }
