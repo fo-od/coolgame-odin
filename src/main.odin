@@ -5,24 +5,28 @@ import SDL "vendor:sdl3"
 import TTF "vendor:sdl3/ttf"
 import "core:strings"
 import "engine/util/timer"
+import "engine/render/queue"
+import "core:fmt"
 
 Mouse :: struct {
-	x, y  : f32,
-	button : SDL.MouseButtonFlags,
+	x, y:   f32,
+	button: SDL.MouseButtonFlags,
 }
 
-window       : ^SDL.Window
-renderer     : ^SDL.Renderer
-font         : ^TTF.Font
-textEngine   : ^TTF.TextEngine
+window:     ^SDL.Window
+renderer:   ^SDL.Renderer
+font:       ^TTF.Font
+textEngine: ^TTF.TextEngine
 
-deltaTime    : f32
-camX, camY   : f32
+deltaTime: f32
+targetFPS: u8
 
-gameRunning  : = false
+camX, camY: f32
 
-keyboardState  : [^]bool
-mouse          : Mouse
+gameRunning: = false
+
+keyboardState: [^]bool
+mouse:         Mouse
 
 windowWidth, windowHeight : i32 = 640, 480
 
@@ -37,7 +41,8 @@ init :: proc() -> bool {
     renderer = SDL.CreateRenderer(window, nil)
 
     // enable vsync
-    SDL.SetRenderVSync(renderer, 1)
+    // SDL.SetRenderVSync(renderer, 1)
+    targetFPS = 60
 
     // ttf stuff
     TTF.Init();
@@ -59,15 +64,12 @@ exit :: proc() {
 }
 
 render :: proc() {
-	renderingTime = SDL.GetTicksNS()
 	SDL.SetRenderDrawColor(renderer, 0, 0, 0, SDL.ALPHA_OPAQUE)
 	SDL.RenderClear(renderer)
 	
-	SDL.SetRenderDrawColor(renderer, 255, 255, 255, SDL.ALPHA_OPAQUE)
-	SDL.RenderDebugTextFormat(renderer, 0, 0, "mouse x: %f, mouse y: %f\nbuttons: %d", mouse.x, mouse.y, mouse.button)
+	queue.render(renderer)
 	
 	SDL.RenderPresent(renderer)
-	renderingTime = SDL.GetTicksNS() - renderingTime
 }
 
 input :: proc(event: ^SDL.Event) {
@@ -87,7 +89,7 @@ input :: proc(event: ^SDL.Event) {
 }
 
 fpsTimer : timer.Timer
-renderingTime : u64
+renderingNS : u64
 
 main :: proc() {
 	if !init() do return
@@ -101,9 +103,22 @@ main :: proc() {
         for ;SDL.PollEvent(&event); {
             input(&event)
         }
+        
+        if renderingNS != 0 {
+        	fps := 1000000000.0 / f64(renderingNS)
+        	sb := strings.Builder{}
+         
+         	queue.drawDebugText(0, 0, strings.clone_to_cstring(fmt.sbprintf(&sb, "fps: %f", fps)))
+        }
 
         render()
-
+        
+        renderingNS = timer.getTicksNS(&fpsTimer)
+        nsPerFrame : u64 : 1000000000 / 60
         deltaTime = f32(SDL.GetTicks() - currentTick) / 1000.0
+        if renderingNS < nsPerFrame {
+        	SDL.DelayNS(nsPerFrame - renderingNS)
+        	renderingNS = timer.getTicksNS(&fpsTimer)
+        }
     }
 }

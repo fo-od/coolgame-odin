@@ -4,10 +4,9 @@ import SDL "vendor:sdl3"
 
 Timer :: struct {
 	//The clock time when the timer started
-    startTicks: u64,
-
+    startTicks:      u64,
     //The ticks stored when the timer was paused
-    pausedTicks: u64,
+    pausedTicks:     u64,
 
     paused, started: bool,
 }
