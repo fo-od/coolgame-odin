@@ -1,7 +1,7 @@
 package queue
 
-import TTF "vendor:sdl3/ttf"
 import SDL "vendor:sdl3"
+import TTF "vendor:sdl3/ttf"
 
 renderQ: [dynamic]Command
 
@@ -14,13 +14,13 @@ CommandType :: enum u8 {
 }
 
 Command :: struct {
-	type:  CommandType,
-	color: SDL.Color,
+	type:     CommandType,
+	color:    SDL.Color,
 	rectOrXY: union {
 		^SDL.FRect,
 		[2]f32,
 	},
-	text: union {
+	text:     union {
 		cstring,
 		^TTF.Text,
 		FormattedString,
@@ -41,19 +41,24 @@ drawRect :: proc(rect: ^SDL.FRect, color := SDL.Color{255, 255, 255, 255}) {
 }
 
 drawText :: proc(x, y: f32, text: ^TTF.Text, color := SDL.Color{255, 255, 255, 255}) {
-	append(&renderQ, Command{.TEXT, color, [2]f32{x,y}, text})
+	append(&renderQ, Command{.TEXT, color, [2]f32{x, y}, text})
 }
 
 drawDebugText :: proc(x, y: f32, text: cstring, color := SDL.Color{255, 255, 255, 255}) {
-	append(&renderQ, Command{.DEBUG_TEXT, color, [2]f32{x,y}, text})
+	append(&renderQ, Command{.DEBUG_TEXT, color, [2]f32{x, y}, text})
 }
 
-drawDebugTextFormat :: proc(x, y: f32, fmt: cstring, args: ..any, color := SDL.Color{255, 255, 255, 255}) {
-	append(&renderQ, Command{.DEBUG_TEXT_FORMAT, color, [2]f32{x,y}, FormattedString{fmt, args}})
+drawDebugTextFormat :: proc(
+	x, y: f32,
+	fmt: cstring,
+	args: ..any,
+	color := SDL.Color{255, 255, 255, 255},
+) {
+	append(&renderQ, Command{.DEBUG_TEXT_FORMAT, color, [2]f32{x, y}, FormattedString{fmt, args}})
 }
 
 @(private)
-oldColor : SDL.Color
+oldColor: SDL.Color
 
 render :: proc(renderer: ^SDL.Renderer) {
 	for cmd in renderQ {
@@ -61,17 +66,33 @@ render :: proc(renderer: ^SDL.Renderer) {
 			SDL.SetRenderDrawColor(renderer, cmd.color.r, cmd.color.g, cmd.color.b, cmd.color.a)
 			oldColor = cmd.color
 		}
-		 switch cmd.type {
-			case .RECT:
-				SDL.RenderRect(renderer, cmd.rectOrXY.(^SDL.FRect))
-			case .FILLED_RECT:
-				SDL.RenderFillRect(renderer, cmd.rectOrXY.(^SDL.FRect))
-			case .TEXT:
-				TTF.DrawRendererText(cmd.text.(^TTF.Text), cmd.rectOrXY.([2]f32).x, cmd.rectOrXY.([2]f32).y)
-			case .DEBUG_TEXT:
-				SDL.RenderDebugText(renderer, cmd.rectOrXY.([2]f32).x, cmd.rectOrXY.([2]f32).y, cmd.text.(cstring))
-			case .DEBUG_TEXT_FORMAT:
-				SDL.RenderDebugTextFormat(renderer, cmd.rectOrXY.([2]f32).x, cmd.rectOrXY.([2]f32).y, cmd.text)
+		switch cmd.type {
+		case .RECT:
+			SDL.RenderRect(renderer, cmd.rectOrXY.(^SDL.FRect))
+		case .FILLED_RECT:
+			SDL.RenderFillRect(renderer, cmd.rectOrXY.(^SDL.FRect))
+		case .TEXT:
+			TTF.DrawRendererText(
+				cmd.text.(^TTF.Text),
+				cmd.rectOrXY.([2]f32).x,
+				cmd.rectOrXY.([2]f32).y,
+			)
+		case .DEBUG_TEXT:
+			SDL.RenderDebugText(
+				renderer,
+				cmd.rectOrXY.([2]f32).x,
+				cmd.rectOrXY.([2]f32).y,
+				cmd.text.(cstring),
+			)
+		case .DEBUG_TEXT_FORMAT:
+			SDL.RenderDebugTextFormat(
+				renderer,
+				cmd.rectOrXY.([2]f32).x,
+				cmd.rectOrXY.([2]f32).y,
+				cmd.text.(FormattedString).fmt,
+				cmd.text.(FormattedString).args
+			)
 		}
 	}
 }
+

@@ -1,21 +1,21 @@
 package main
 
+import "core:fmt"
 import "core:os"
+import "core:strings"
+import "engine/render/queue"
+import "engine/util/timer"
 import SDL "vendor:sdl3"
 import TTF "vendor:sdl3/ttf"
-import "core:strings"
-import "engine/util/timer"
-import "engine/render/queue"
-import "core:fmt"
 
 Mouse :: struct {
 	x, y:   f32,
 	button: SDL.MouseButtonFlags,
 }
 
-window:     ^SDL.Window
-renderer:   ^SDL.Renderer
-font:       ^TTF.Font
+window: ^SDL.Window
+renderer: ^SDL.Renderer
+font: ^TTF.Font
 textEngine: ^TTF.TextEngine
 
 deltaTime: f32
@@ -23,52 +23,55 @@ targetFPS: u8
 
 camX, camY: f32
 
-gameRunning: = false
+gameRunning := false
 
 keyboardState: [^]bool
-mouse:         Mouse
+mouse: Mouse
 
-windowWidth, windowHeight : i32 = 640, 480
+windowWidth, windowHeight: i32 = 640, 480
 
 // TODO: when loading a level, generate a quadtree for that level
 
 init :: proc() -> bool {
-    // sdl stuff
-    if !(SDL.SetAppMetadata("cool game", "0.1", "com.food.coolgame") && SDL.Init(SDL.INIT_VIDEO)) do return false
+	// sdl stuff
+	if !(SDL.SetAppMetadata("cool game", "0.1", "com.food.coolgame") && SDL.Init(SDL.INIT_VIDEO)) do return false
 
 
-    window   = SDL.CreateWindow("cool game", windowWidth, windowHeight, SDL.WINDOW_RESIZABLE)
-    renderer = SDL.CreateRenderer(window, nil)
+	window = SDL.CreateWindow("cool game", windowWidth, windowHeight, SDL.WINDOW_RESIZABLE)
+	renderer = SDL.CreateRenderer(window, nil)
 
-    // enable vsync
-    // SDL.SetRenderVSync(renderer, 1)
-    targetFPS = 60
+	// enable vsync
+	// SDL.SetRenderVSync(renderer, 1)
+	targetFPS = 60
 
-    // ttf stuff
-    TTF.Init();
-    textEngine    = TTF.CreateRendererTextEngine(renderer)
-    fontPath, err := os.join_path({string(SDL.GetBasePath()), "assets/cozette.fnt"}, context.allocator)
-    font          = TTF.OpenFont(strings.clone_to_cstring(fontPath), 13)
+	// ttf stuff
+	TTF.Init()
+	textEngine = TTF.CreateRendererTextEngine(renderer)
+	fontPath, err := os.join_path(
+		{string(SDL.GetBasePath()), "assets/cozette.fnt"},
+		context.allocator,
+	)
+	font = TTF.OpenFont(strings.clone_to_cstring(fontPath), 13)
 
-    gameRunning = true
-    return true
+	gameRunning = true
+	return true
 }
 
 exit :: proc() {
-    TTF.CloseFont(font)
-    TTF.Quit()
+	TTF.CloseFont(font)
+	TTF.Quit()
 
-    SDL.DestroyRenderer(renderer)
-    SDL.DestroyWindow(window)
-    SDL.Quit()
+	SDL.DestroyRenderer(renderer)
+	SDL.DestroyWindow(window)
+	SDL.Quit()
 }
 
 render :: proc() {
 	SDL.SetRenderDrawColor(renderer, 0, 0, 0, SDL.ALPHA_OPAQUE)
 	SDL.RenderClear(renderer)
-	
+
 	queue.render(renderer)
-	
+
 	SDL.RenderPresent(renderer)
 }
 
@@ -76,49 +79,50 @@ input :: proc(event: ^SDL.Event) {
 	#partial switch event.type {
 	case .QUIT:
 		gameRunning = false
-		
+
 	case .WINDOW_RESIZED:
 		SDL.GetWindowSizeInPixels(window, &windowWidth, &windowHeight)
-		
+
 	case .KEY_DOWN, .KEY_UP:
 		keyboardState = SDL.GetKeyboardState(nil)
-		
+
 	case .MOUSE_MOTION, .MOUSE_BUTTON_DOWN, .MOUSE_BUTTON_UP:
 		mouse.button = SDL.GetMouseState(&mouse.x, &mouse.y)
 	}
 }
 
-fpsTimer : timer.Timer
-renderingNS : u64
+fpsTimer: timer.Timer
+renderingNS: u64
 
 main :: proc() {
 	if !init() do return
 	defer exit()
 
-	for ;gameRunning; {
+	for gameRunning {
 		timer.start(&fpsTimer)
-        currentTick := SDL.GetTicks()
+		currentTick := SDL.GetTicks()
 
-        event : SDL.Event
-        for ;SDL.PollEvent(&event); {
-            input(&event)
-        }
-        
-        if renderingNS != 0 {
-        	fps := 1000000000.0 / f64(renderingNS)
-        	sb := strings.Builder{}
-         
-         	queue.drawDebugText(0, 0, strings.clone_to_cstring(fmt.sbprintf(&sb, "fps: %f", fps)))
-        }
+		event: SDL.Event
+		for SDL.PollEvent(&event) {
+			input(&event)
+		}
 
-        render()
-        
-        renderingNS = timer.getTicksNS(&fpsTimer)
-        nsPerFrame : u64 : 1000000000 / 60
-        deltaTime = f32(SDL.GetTicks() - currentTick) / 1000.0
-        if renderingNS < nsPerFrame {
-        	SDL.DelayNS(nsPerFrame - renderingNS)
-        	renderingNS = timer.getTicksNS(&fpsTimer)
-        }
-    }
+		if renderingNS != 0 {
+			fps := 1000000000.0 / f64(renderingNS)
+			sb := strings.Builder{}
+
+			queue.drawDebugText(0, 0, strings.clone_to_cstring(fmt.sbprintf(&sb, "fps: %f", fps)))
+		}
+
+		render()
+
+		renderingNS = timer.getTicksNS(&fpsTimer)
+		nsPerFrame: u64 : 1000000000 / 60
+		deltaTime = f32(SDL.GetTicks() - currentTick) / 1000.0
+		if renderingNS < nsPerFrame {
+			SDL.DelayNS(nsPerFrame - renderingNS)
+			renderingNS = timer.getTicksNS(&fpsTimer)
+		}
+	}
 }
+
