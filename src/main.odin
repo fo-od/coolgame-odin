@@ -91,6 +91,10 @@ input :: proc(event: ^SDL.Event) {
 	}
 }
 
+tick :: proc() {
+	//update physics here
+}
+
 fpsTimer: timer.TimerNS
 renderingNS: u64
 
@@ -107,6 +111,7 @@ main :: proc() {
 		for SDL.PollEvent(&event) {
 			input(&event)
 		}
+		tick()
 
 		render()
 		renderingNS = timer.getTicksNS(&fpsTimer)
