@@ -13,7 +13,7 @@ font: ^TTF.Font
 textEngine: ^TTF.TextEngine
 
 deltaTime: f32
-targetFPS:: 60
+targetFPS :: 60
 
 camX, camY: f32
 
