@@ -2,7 +2,7 @@ package timer
 
 import SDL "vendor:sdl3"
 
-Timer :: struct {
+TimerNS :: struct {
 	//The clock time when the timer started
     startTicks:      u64,
     //The ticks stored when the timer was paused
@@ -11,7 +11,7 @@ Timer :: struct {
     paused, started: bool,
 }
 
-getTicksNS :: proc(timer: ^Timer) -> u64 {
+getTicksNS :: proc(timer: ^TimerNS) -> u64 {
 	if timer.started {
 		if timer.paused {
 			return timer.pausedTicks
@@ -21,7 +21,7 @@ getTicksNS :: proc(timer: ^Timer) -> u64 {
 	return 0
 }
 
-start :: proc(timer: ^Timer) {
+start :: proc(timer: ^TimerNS) {
 	timer.started = true
 	timer.paused = false
 	
@@ -29,7 +29,7 @@ start :: proc(timer: ^Timer) {
 	timer.pausedTicks = 0
 }
 
-stop :: proc(timer: ^Timer) {
+stop :: proc(timer: ^TimerNS) {
 	timer.started = false
 	timer.paused = false
 	
@@ -37,7 +37,7 @@ stop :: proc(timer: ^Timer) {
 	timer.pausedTicks = 0
 }
 
-pause :: proc(timer: ^Timer) {
+pause :: proc(timer: ^TimerNS) {
 	if timer.started && !timer.paused {
 		timer.paused = true
 		
@@ -46,7 +46,7 @@ pause :: proc(timer: ^Timer) {
 	}
 }
 
-unpause :: proc(timer: ^Timer) {
+unpause :: proc(timer: ^TimerNS) {
 	if timer.started && timer.paused {
 		timer.paused = false
 		

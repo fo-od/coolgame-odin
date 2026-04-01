@@ -13,7 +13,8 @@ font: ^TTF.Font
 textEngine: ^TTF.TextEngine
 
 deltaTime: f32
-targetFPS :: 60
+targetFPS :: 64
+vsyncEnabled :: false
 
 camX, camY: f32
 
@@ -35,12 +36,8 @@ init :: proc() -> bool {
 	// sdl stuff
 	if !(SDL.SetAppMetadata("cool game", "0.1", "com.food.coolgame") && SDL.Init(SDL.INIT_VIDEO)) do return false
 
-
 	window = SDL.CreateWindow("cool game", windowWidth, windowHeight, SDL.WINDOW_RESIZABLE)
 	renderer = SDL.CreateRenderer(window, nil)
-
-	// enable vsync
-	SDL.SetRenderVSync(renderer, 0)
 
 	// ttf stuff
 	TTF.Init()
@@ -89,7 +86,7 @@ input :: proc(event: ^SDL.Event) {
 	}
 }
 
-fpsTimer: timer.Timer
+fpsTimer: timer.TimerNS
 renderingNS: u64
 
 main :: proc() {
@@ -106,13 +103,17 @@ main :: proc() {
 		}
 
 		render()
-
 		renderingNS = timer.getTicksNS(&fpsTimer)
-		nsPerFrame: u64 : 1000000000 / targetFPS
+
+		queue.drawDebugTextFormat(0, 0, "fps: %f", 1000000000.0 / f32(renderingNS))
+
 		deltaTime = f32(SDL.GetTicks() - currentTick) / 1000.0
-		if renderingNS < nsPerFrame {
-			SDL.DelayNS(nsPerFrame - renderingNS)
-			renderingNS = timer.getTicksNS(&fpsTimer)
+		if !vsyncEnabled {
+			nsPerFrame: u64 : 1000000000 / targetFPS
+			if renderingNS < nsPerFrame {
+				SDL.DelayNS(nsPerFrame - renderingNS)
+				renderingNS = timer.getTicksNS(&fpsTimer)
+			}
 		}
 	}
 }
