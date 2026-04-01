@@ -1,5 +1,6 @@
 package main
 
+import "core:fmt"
 import "core:os"
 import "core:strings"
 import "engine/render/queue"
@@ -13,7 +14,8 @@ font: ^TTF.Font
 textEngine: ^TTF.TextEngine
 
 deltaTime: f32
-targetFPS :: 64
+targetFPS :: 60
+nsPerFrame: u64 : 1000000000 / targetFPS
 vsyncEnabled :: false
 
 camX, camY: f32
@@ -47,6 +49,9 @@ init :: proc() -> bool {
 		context.temp_allocator,
 	)
 	font = TTF.OpenFont(strings.clone_to_cstring(fontPath), 13)
+	
+	// game config
+	SDL.SetRenderVSync(renderer, i32(vsyncEnabled))
 
 	gameRunning = true
 	return true
@@ -96,6 +101,7 @@ main :: proc() {
 	for gameRunning {
 		timer.start(&fpsTimer)
 		currentTick := SDL.GetTicks()
+		defer deltaTime = f32(SDL.GetTicks() - currentTick) / 1000.0
 
 		event: SDL.Event
 		for SDL.PollEvent(&event) {
@@ -104,12 +110,7 @@ main :: proc() {
 
 		render()
 		renderingNS = timer.getTicksNS(&fpsTimer)
-
-		queue.drawDebugTextFormat(0, 0, "fps: %f", 1000000000.0 / f32(renderingNS))
-
-		deltaTime = f32(SDL.GetTicks() - currentTick) / 1000.0
 		if !vsyncEnabled {
-			nsPerFrame: u64 : 1000000000 / targetFPS
 			if renderingNS < nsPerFrame {
 				SDL.DelayNS(nsPerFrame - renderingNS)
 				renderingNS = timer.getTicksNS(&fpsTimer)
