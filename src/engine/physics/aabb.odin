@@ -14,6 +14,7 @@ Rect :: struct {
 	visible, filled: bool,
 }
 
+@(private)
 rects: [dynamic]^Rect
 filledRects: [dynamic]^Rect
 
@@ -56,30 +57,30 @@ draw :: proc(renderer: ^SDL.Renderer) {
 	}
 }
 
-min :: proc(aabb: ^AABB) -> [2]f32 {
+min :: proc(aabb: AABB) -> [2]f32 {
 	return aabb.pos - aabb.halfSize
 }
 
-max :: proc(aabb: ^AABB) -> [2]f32 {
+max :: proc(aabb: AABB) -> [2]f32 {
 	return aabb.pos + aabb.halfSize
 }
 
-minkowski_difference :: proc(a, b: ^AABB) -> AABB {
+minkowski_difference :: proc(a, b: AABB) -> AABB {
 	return create_AABB(a.pos - b.pos, a.halfSize + b.halfSize)
 }
 
-intersects :: proc(a, b: ^AABB) -> bool {
+intersects_aabb :: proc(a, b: AABB) -> bool {
 	diff := minkowski_difference(a, b)
-	min := min(&diff)
-	max := max(&diff)
+	min := min(diff)
+	max := max(diff)
 
 	return min.x <= 0 && max.x >= 0 && min.y <= 0 && max.y >= 0
 }
 
 intersects_pm :: proc(aabb: ^AABB, pos, magnitude: [2]f32) -> Hit {
 	hit: Hit
-	min := min(aabb)
-	max := max(aabb)
+	min := min(aabb^)
+	max := max(aabb^)
 
 	last_entry: f32 = math.F32_MIN
 	first_exit: f32 = math.F32_MAX
@@ -118,11 +119,11 @@ intersects_pm :: proc(aabb: ^AABB, pos, magnitude: [2]f32) -> Hit {
 	return hit
 }
 
-penetration_vector :: proc(a, b: ^AABB) -> [2]f32 {
+penetration_vector :: proc(aabb: AABB) -> [2]f32 {
 	result: [2]f32
 
-	min := min(b)
-	max := max(b)
+	min := min(aabb)
+	max := max(aabb)
 
 	min_dist := abs(min.x)
 	result.x = min.x

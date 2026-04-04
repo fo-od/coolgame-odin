@@ -5,6 +5,7 @@ import "core:os"
 import "core:strings"
 import "engine/render/queue"
 import "engine/util/timer"
+import "engine/physics"
 import SDL "vendor:sdl3"
 import TTF "vendor:sdl3/ttf"
 
@@ -92,7 +93,7 @@ input :: proc(event: ^SDL.Event) {
 }
 
 tick :: proc() {
-	//update physics here
+	physics.tick(deltaTime)
 }
 
 fpsTimer: timer.TimerNS
@@ -111,6 +112,7 @@ main :: proc() {
 		for SDL.PollEvent(&event) {
 			input(&event)
 		}
+		
 		tick()
 
 		render()
